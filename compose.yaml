@@ -83,19 +83,19 @@ services:
     networks:
       - hznet
 
-  # event-generator:
-  #   image: amazoncorretto:11
-  #   command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
-  #   environment:
-  #     HZ_SERVERS: hz
-  #     HZ_CLUSTER_NAME: dev 
-  #     MACHINE_COUNT: 10
-  #     KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
-  #     KAFKA_TOPIC: "machine_events"
-  #   volumes:
-  #     - ".:/project"
-  #   networks:
-  #     - hznet
+  event-generator:
+     build:
+       context: event-generator
+     command: python /project/event-generator/event_generator.py
+     environment:
+       HZ_SERVERS: hz
+       HZ_CLUSTER_NAME: dev
+       KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
+       KAFKA_TRANSACTION_TOPIC: "transactions"
+     volumes:
+       - ".:/project"
+     networks:
+       - hznet
   
   # ui:
   #   build:

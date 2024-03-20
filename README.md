@@ -15,6 +15,7 @@ Data Generator - puts messages in a topic - a swipe will have
 
 
 
+
 # Lab Briefing
 
 > **Note** This lab guide uses Markdown formatting.  The best way to view it is directly on the GitHub site 

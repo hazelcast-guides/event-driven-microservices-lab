@@ -7,7 +7,6 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import hazelcast.platform.labs.payments.domain.Card;
 import hazelcast.platform.labs.payments.domain.Names;
-import hazelcast.platform.labs.viridian.ViridianConnection;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +28,14 @@ public class RefdataLoader {
 
     private static final String CARD_COUNT_PROP = "CARD_COUNT";
 
+    private static final String CARD_MAPPING_SQL =
+            "CREATE OR REPLACE MAPPING cards (cardNumber VARCHAR ) " +
+            "Type IMap " +
+            "OPTIONS ( " +
+                "'keyFormat' = 'varchar', " +
+                "'valueFormat' = 'compact' ," +
+                "'valueCompactTypeName' = 'hazelcast.platform.labs.payments.domain.Card')";
+
     private static String []hzServers;
     private static String hzClusterName;
 
@@ -44,13 +51,11 @@ public class RefdataLoader {
     }
 
     private static void configure(){
-        if (!ViridianConnection.viridianConfigPresent()) {
-            String hzServersProp = getRequiredProp(HZ_SERVERS_PROP);
-            hzServers = hzServersProp.split(",");
-            for (int i = 0; i < hzServers.length; ++i) hzServers[i] = hzServers[i].trim();
+        String hzServersProp = getRequiredProp(HZ_SERVERS_PROP);
+        hzServers = hzServersProp.split(",");
+        for (int i = 0; i < hzServers.length; ++i) hzServers[i] = hzServers[i].trim();
 
-            hzClusterName = getRequiredProp(HZ_CLUSTER_NAME_PROP);
-        }
+        hzClusterName = getRequiredProp(HZ_CLUSTER_NAME_PROP);
 
         String temp = getRequiredProp(CARD_COUNT_PROP);
         try {
@@ -67,18 +72,10 @@ public class RefdataLoader {
     }
 
     private static void doSQLMappings(HazelcastInstance hzClient){
-//        hzClient.getSql().execute(PROFILE_MAPPING_SQL);
-//        hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
-//        hzClient.getSql().execute(EVENT_MAPPING_SQL);
-//        hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
-//        hzClient.getSql().execute(MACHINE_STATUS_SUMMARY_MAPPING_SQL);
-//        hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
+            hzClient.getSql().execute(CARD_MAPPING_SQL);
         System.out.println("Initialized SQL Mappings");
     }
 
-    private static void configureMaps(HazelcastInstance hzClient){
-        System.out.println("Initialized Map Configurations");
-    }
     public static void main(String []args){
         configure();
 

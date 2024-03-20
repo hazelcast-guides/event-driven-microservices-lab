@@ -23,7 +23,11 @@ public class Card {
     private static Faker faker = new Faker();
     public static Card fake(){
         Card result = new Card();
-        result.setCardNumber(faker.finance().creditCard());
+        String cc = faker.finance().creditCard();
+        while(cc.length() != 19)
+            cc = faker.finance().creditCard();
+
+        result.setCardNumber(cc);
         return result;
     }
 
