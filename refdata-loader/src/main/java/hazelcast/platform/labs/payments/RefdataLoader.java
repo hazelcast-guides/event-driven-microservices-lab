@@ -1,4 +1,4 @@
-package hazelcast.platform.labs.machineshop;
+package hazelcast.platform.labs.payments;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;

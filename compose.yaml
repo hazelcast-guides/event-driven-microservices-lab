@@ -1,20 +1,43 @@
 services:
 
-  hz:
+  hz1:
     image: hazelcast/hazelcast:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
-      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
+    ports:
+      - "5701:5701"
     volumes:
       - ".:/project"
     networks:
       - hznet
 
+  hz2:
+    image: hazelcast/hazelcast:5.3
+    environment:
+      JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
+  hz3:
+    image: hazelcast/hazelcast:5.3
+    environment:
+      JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
   mc:
     image: hazelcast/management-center:5.3
     environment:
       MC_DEFAULT_CLUSTER: dev
-      MC_DEFAULT_CLUSTER_MEMBERS: hz:5701
+      MC_DEFAULT_CLUSTER_MEMBERS: hz1:5701
     ports:
       - "8080:8080"
     networks:
@@ -75,7 +98,7 @@ services:
     image: amazoncorretto:17
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
-      HZ_SERVERS: hz
+      HZ_SERVERS: hz1
       HZ_CLUSTER_NAME: dev
       CARD_COUNT: 100000
     volumes:
@@ -88,7 +111,7 @@ services:
        context: event-generator
      command: python /project/event-generator/event_generator.py
      environment:
-       HZ_SERVERS: hz
+       HZ_SERVERS: hz1
        HZ_CLUSTER_NAME: dev
        KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
        KAFKA_TRANSACTION_TOPIC: "transactions"

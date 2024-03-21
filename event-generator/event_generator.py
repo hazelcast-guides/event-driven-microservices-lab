@@ -29,8 +29,11 @@ from card import CardSerializer
 
 def fake_txn(ccnum: str):
     result = {"card_number": ccnum}
-    t = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
-    result["timestamp"] = t.isoformat()
+    
+    # t = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    # result["timestamp"] = t.isoformat()
+
+    result["transaction_id"] = f'{int(time.time()):010d}'
 
     if random.random() < 0.1:
         amt = 1000000

@@ -10,8 +10,12 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>pipelines</artifactId>
+    <artifactId>fraud-pipelines</artifactId>
 
+    <!--
+    Note: all Hazelcast dependencies should use "provided" scope so they are not included in the
+          uber-jar.
+    -->
     <dependencies>
         <dependency>
             <groupId>com.hazelcast</groupId>
@@ -26,7 +30,7 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast.solutions</groupId>
+            <groupId>com.hazelcast.training</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
