@@ -1,5 +1,7 @@
 package hazelcast.platform.labs.payments.domain;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+
 public class Transaction {
     private String cardNumber;
     private String transactionId;
@@ -10,6 +12,7 @@ public class Transaction {
         return cardNumber;
     }
 
+    @JsonSetter("card_number")
     public void setCardNumber(String cardNumber) {
         this.cardNumber = cardNumber;
     }
@@ -18,6 +21,7 @@ public class Transaction {
         return transactionId;
     }
 
+    @JsonSetter("transaction_id")
     public void setTransactionId(String transactionId) {
         this.transactionId = transactionId;
     }
@@ -26,6 +30,7 @@ public class Transaction {
         return amount;
     }
 
+    @JsonSetter("amount")
     public void setAmount(int amount) {
         this.amount = amount;
     }
@@ -34,6 +39,7 @@ public class Transaction {
         return merchantId;
     }
 
+    @JsonSetter("merchant_id")
     public void setMerchantId(String merchantId) {
         this.merchantId = merchantId;
     }

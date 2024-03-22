@@ -38,6 +38,8 @@ public class FraudPipeline {
         kafkaConnectionProps.setProperty("bootstrap.servers", kafkaBootstrapServers);
         kafkaConnectionProps.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         kafkaConnectionProps.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        kafkaConnectionProps.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafkaConnectionProps.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         StreamSource<Map.Entry<String, String>> source = KafkaSources.kafka(kafkaConnectionProps, inputTopic);
 
         /*
