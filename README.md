@@ -96,9 +96,12 @@ clc -c docker  job list
 ```
 
 WIERD PROBLEM:
-1) messages in "approvals" which are output from the pipeline, exceed messages from "transactions", which are input to the pipeline.  They should be 1-1
-2) if you stop the event generator (`docker compose stop event-generator`) the "total in" will continue to rise even though nothing is being written to the topic 
-   at the same time, the total out will remain steady 
+Here is where things go wrong. Stop the event generator (`docker compose stop event-generator`).  
+
+Observations
+1. The number of messages out (in the "approvals" topic) should match the number of messages in (from the "transactions" topic) but there are actually more messages out. 
+2. Even with the event generator stopped, the "total in" will continue to rise even though nothing is being written to the topic 
+   at the same time, the total out will remain steady. The total out as reporte by MC matches the number of items in the input topic, "transactions"
 
 
 
