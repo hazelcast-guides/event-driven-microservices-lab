@@ -95,18 +95,10 @@ clc -c docker  job list
  0b6d-f591-2180-0001 | Fraud Checker | RUNNING | 2024-03-22 11:50:01 | -
 ```
 
-### progress check
-- [ ] how to implement an event-driven microservice by writing a Pipeline
-- [x] how to deploy your service to the Hazelcast platform
-- [ ] how to scale your service
-- [ ] how to update your service while it is running
-- [ ] how to take advantage of the fast data store that is built in to the platform
-- [ ] how to incorporate python code into your service
-- [ ] as a bonus, you will learn how traditional REST microservices can be implemented with Hazelcast Pipelines
-
-# Lab 2: Modify the Service
-
-Let's start with a simple rule.  If the transaction amount is over 
+WIERD PROBLEM:
+1) messages in "approvals" which are output from the pipeline, exceed messages from "transactions", which are input to the pipeline.  They should be 1-1
+2) if you stop the event generator (`docker compose stop event-generator`) the "total in" will continue to rise even though nothing is being written to the topic 
+   at the same time, the total out will remain steady 
 
 
 

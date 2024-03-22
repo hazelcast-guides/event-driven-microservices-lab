@@ -126,7 +126,7 @@ public class FraudPipeline {
         pipeline.setPreserveOrder(false);   // nothing in here requires order
         JobConfig jobConfig = new JobConfig();
         jobConfig.setName("Fraud Checker");
-        jobConfig.setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
+        jobConfig.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
         HazelcastInstance hz = Hazelcast.bootstrappedInstance();
         hz.getJet().newJob(pipeline, jobConfig);
     }
