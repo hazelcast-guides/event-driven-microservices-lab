@@ -72,6 +72,41 @@ You can also access the Hazelcast Management Center at http://localhost:8080
 
 # Lab 1: Deploy a Service 
 
+For this lab the pipeline has already been built for you.  It simply reads every 
+message from the "transactions" topic and publishes an approval on the "approvals" 
+topic.  It does no fraud detection at all!
+
+
+Check out the code in `hazelcast.platform.labs.payments.FraudPipeline` 
+
+Build and deploy the Pipeline. From a command prompt in the project root directory run:
+```shell
+mcn clean install
+clc -c docker  job submit fraud-pipelines/target/fraud-pipelines-1.0-SNAPSHOT.jar redpanda:9092 transactions approvals --class hazelcast.platform.labs.payments.FraudPipeline
+```
+
+To verify it worked, check the "Jobs" section of Hazelcast Management Center (http://localhost:8080) 
+and also use the Kafka UI (http://localhost:8000) to see that there are messages in the "approvals" topic.
+
+You can also use CLC to check the status of the job:
+```shell
+clc -c docker  job list
+ Job ID              | Name          | Status  | Submitted           | Completed
+ 0b6d-f591-2180-0001 | Fraud Checker | RUNNING | 2024-03-22 11:50:01 | -
+```
+
+### progress check
+- [ ] how to implement an event-driven microservice by writing a Pipeline
+- [x] how to deploy your service to the Hazelcast platform
+- [ ] how to scale your service
+- [ ] how to update your service while it is running
+- [ ] how to take advantage of the fast data store that is built in to the platform
+- [ ] how to incorporate python code into your service
+- [ ] as a bonus, you will learn how traditional REST microservices can be implemented with Hazelcast Pipelines
+
+# Lab 2: Modify the Service
+
+Let's start with a simple rule.  If the transaction amount is over 
 
 
 
