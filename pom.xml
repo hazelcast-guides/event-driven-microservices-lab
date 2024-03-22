@@ -12,9 +12,9 @@
         <!-- Why Java 11?   this is what is currently built into the hazelcast Docker image.
              Pipeline code from this project will run on the Hazelcast server and
              therefore needs to be runnable under Java 11 -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <hazelcast.version>5.3.6</hazelcast.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <hazelcast.version>5.4.0-BETA-2</hazelcast.version>
         <jackson.version>2.15.1</jackson.version>
     </properties>
 

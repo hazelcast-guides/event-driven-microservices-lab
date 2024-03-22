@@ -56,11 +56,13 @@ for env_var in ["KAFKA_BOOTSTRAP_SERVERS", "KAFKA_TRANSACTION_TOPIC", "HZ_SERVER
 
 hz_servers = [s.strip() for s in os.environ["HZ_SERVERS"].split(',')]
 
+print('BEFORE CONNECT')
 hz = hazelcast.HazelcastClient(
     cluster_members=hz_servers,
     cluster_name=os.environ["HZ_CLUSTER_NAME"],
     compact_serializers=[CardSerializer()]
 )
+print('AFTER CONNECT')
 
 # wait for the reference data loader to be finished
 loaded = threading.Event()
