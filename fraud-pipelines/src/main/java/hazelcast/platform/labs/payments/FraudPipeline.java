@@ -36,7 +36,7 @@ public class FraudPipeline {
         kafkaConnectionProps.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         kafkaConnectionProps.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         kafkaConnectionProps.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaConnectionProps.setProperty("auto.offset.reset", "earliest");
+        kafkaConnectionProps.setProperty("auto.offset.reset", "latest");
         return kafkaConnectionProps;
     }
 
