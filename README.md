@@ -12,7 +12,7 @@ how Hazelcast implements event-driven microservices.  In this lab, you will lear
 - [ ] how to implement an event-driven microservice by writing a Pipeline 
 - [ ] how to deploy your service to the Hazelcast platform
 - [ ] how to scale your service 
-- [ ] how to update your service while it is running 
+- [ ] how to update your service  
 - [ ] how to take advantage of the fast data store that is built in to the platform
 - [ ] how to incorporate python code into your service 
 - [ ] as a bonus, you will learn how traditional REST microservices can be implemented with Hazelcast Pipelines

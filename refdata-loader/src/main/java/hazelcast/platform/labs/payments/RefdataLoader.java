@@ -29,8 +29,11 @@ public class RefdataLoader {
     private static final String CARD_COUNT_PROP = "CARD_COUNT";
 
     private static final String CARD_MAPPING_SQL =
-            "CREATE OR REPLACE MAPPING cards (cardNumber VARCHAR ) " +
-            "Type IMap " +
+            "CREATE OR REPLACE MAPPING cards (" +
+                    "cardNumber VARCHAR, " +
+                    "creditLimitDollars INTEGER, " +
+                    "authorizedDollars INTEGER " +
+            ") Type IMap " +
             "OPTIONS ( " +
                 "'keyFormat' = 'varchar', " +
                 "'valueFormat' = 'compact' ," +
