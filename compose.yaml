@@ -119,6 +119,8 @@ services:
        - ".:/project"
      networks:
        - hznet
+     profiles:
+      - disabled
   
   # ui:
   #   build:
