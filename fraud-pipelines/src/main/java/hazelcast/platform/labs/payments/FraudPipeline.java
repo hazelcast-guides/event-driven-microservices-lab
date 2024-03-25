@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
+import hazelcast.platform.labs.payments.domain.Card;
+import hazelcast.platform.labs.payments.domain.Names;
 import hazelcast.platform.labs.payments.domain.Transaction;
 
 import java.util.Map;
@@ -89,14 +89,34 @@ public class FraudPipeline {
 
 
         /*
-         * This stage returns the tuple (credit_card_number, transaction_id, true)
+         * This stage returns the tuple (transaction, true_or_false)
          */
-        StreamStage<Tuple3<String, String, Boolean>> approvals =
-                transactions.map(txn -> Tuple3.tuple3(txn.getCardNumber(), txn.getTransactionId(), true));
+        StreamStage<Tuple2<Transaction, Boolean>> approvals1 =
+                transactions.map(txn -> Tuple2.tuple2(txn,  txn.getAmount() <= 5000 ));
 
         // LAB 2: Modify the map operation above. The last item in the tuple should be false (not approved) if
         //        the transaction amount is over 5000
 
+
+        // LAB 3: If the 3rd position in the tuple indicates that the transaction is not approved, there is no
+        //        point in doing any more fraud check, use a filter state to route these events directly to
+        //        the sink.  Use another filter state to check whether
+        //        transaction amount + authorizedDollars < creditLimitDollars.  authorizedDollars and creditLimitDollars
+        //        are found in the "Card" IMap.  useMapUsingIMap to retrieve this information.  We want this to be
+        //        a local operation so add a grouping key by CC#
+
+        StreamStage<Tuple2<Transaction, Boolean>> deniedBigTxn = approvals1.filter(event -> !event.f1());
+
+        // do I need the grouping key ?
+        // how should one handle null / not found ?
+        // doc says a no-match will cause no event to be emitted but my NPE says otherwise, what up ?
+        // well shit, I also can't access the Card class in "mapUsingIMap"
+        StreamStage<Tuple2<Transaction, Boolean>> approvals2 = approvals1.filter( event -> event.f1())
+                .groupingKey( tuple -> tuple.f0().getCardNumber())
+                .<Card, Tuple2<Transaction, Boolean>>mapUsingIMap(Names.CARD_MAP_NAME, (event, card) -> {
+                    boolean approved = event.f0().getAmount() + card.getAuthorizedDollars() <= card.getCreditLimitDollars();
+                    return Tuple2.tuple2(event.f0(),approved);
+                });
 
         /*
          * For each transaction, create a Map.Entry where the key is the credit card number and the value is
@@ -107,10 +127,11 @@ public class FraudPipeline {
          * Note:the Hazelcast Tuple2 class implements Map.Entry
          */
 
-        approvals.map(approval -> Tuple2.tuple2(
-                approval.f0(),
-                FraudPipeline.resultJson(approval.f1(), approval.f2()) )
-        ).writeTo(sink);
+        approvals2.merge(deniedBigTxn)
+                .map(approval -> Tuple2.tuple2(
+                    approval.f0().getCardNumber(),
+                    FraudPipeline.resultJson(approval.f0().getTransactionId(), approval.f1())))
+                .writeTo(sink);
 
         return pipeline;
     }
@@ -126,7 +147,6 @@ public class FraudPipeline {
         pipeline.setPreserveOrder(false);   // nothing in here requires order
         JobConfig jobConfig = new JobConfig();
         jobConfig.setName("Fraud Checker");
-        jobConfig.setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
         HazelcastInstance hz = Hazelcast.bootstrappedInstance();
         hz.getJet().newJob(pipeline, jobConfig);
     }

@@ -1,0 +1,8 @@
+TO DO
+- add snapshots - will need enterprise for this
+- consider adding re-use of the final stage ?
+- an image illustrating how the filter stages work
+- research - do I really need to add a grouping key before mapUsingIMap or will it just the route the event ?
+- need to make sure students are familiar with Tuple
+
+
