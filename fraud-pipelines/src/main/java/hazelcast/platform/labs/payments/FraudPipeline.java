@@ -8,6 +8,7 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
+import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
 import hazelcast.platform.labs.payments.domain.Card;
 import hazelcast.platform.labs.payments.domain.Names;
 import hazelcast.platform.labs.payments.domain.Transaction;

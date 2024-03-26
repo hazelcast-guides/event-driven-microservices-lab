@@ -1,9 +1,10 @@
 services:
 
   hz1:
-    image: hazelcast/hazelcast:5.3
+    image: hazelcast/hazelcast-enterprise:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
+      HZ_LICENSEKEY: ${HZ_LICENSEKEY}
     ports:
       - "5701:5701"
     volumes:
@@ -12,20 +13,20 @@ services:
       - hznet
 
   hz2:
-    image: hazelcast/hazelcast:5.3
+    image: hazelcast/hazelcast-enterprise:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
+      HZ_LICENSEKEY: ${HZ_LICENSEKEY}
     volumes:
       - ".:/project"
     networks:
       - hznet
-    profiles:
-      - disabled
 
   hz3:
-    image: hazelcast/hazelcast:5.3
+    image: hazelcast/hazelcast-enterprise:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
+      HZ_LICENSEKEY: ${HZ_LICENSEKEY}
     volumes:
       - ".:/project"
     networks:
