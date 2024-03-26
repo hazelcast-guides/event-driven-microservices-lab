@@ -1,7 +1,7 @@
 services:
 
   hz1:
-    image: hazelcast/hazelcast-enterprise:5.3
+    image: hazelcast/hazelcast:5.4.0-SNAPSHOT
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
       HZ_LICENSEKEY: ${HZ_LICENSEKEY}
@@ -13,7 +13,7 @@ services:
       - hznet
 
   hz2:
-    image: hazelcast/hazelcast-enterprise:5.3
+    image: hazelcast/hazelcast:5.4.0-SNAPSHOT
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
       HZ_LICENSEKEY: ${HZ_LICENSEKEY}
@@ -23,7 +23,7 @@ services:
       - hznet
 
   hz3:
-    image: hazelcast/hazelcast-enterprise:5.3
+    image: hazelcast/hazelcast:5.4.0-SNAPSHOT
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
       HZ_LICENSEKEY: ${HZ_LICENSEKEY}
@@ -35,7 +35,7 @@ services:
       - disabled
 
   mc:
-    image: hazelcast/management-center:5.3
+    image: hazelcast/management-center:5.4.0-BETA-2
     environment:
       MC_DEFAULT_CLUSTER: dev
       MC_DEFAULT_CLUSTER_MEMBERS: hz1:5701
