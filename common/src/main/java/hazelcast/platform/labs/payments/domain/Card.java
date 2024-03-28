@@ -5,6 +5,8 @@ import com.github.javafaker.Faker;
 public class Card  {
     String cardNumber;
 
+    boolean locked;
+
     // using int just to make arithmetic easier
     int creditLimitDollars;
     int authorizedDollars;
@@ -33,10 +35,19 @@ public class Card  {
         this.authorizedDollars = authorizedDollars;
     }
 
+    public boolean getLocked() {
+        return locked;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
+    }
+
     @Override
     public String toString() {
         return "Card{" +
                 "cardNumber='" + cardNumber + '\'' +
+                ", locked=" + locked +
                 ", creditLimitDollars=" + creditLimitDollars +
                 ", authorizedDollars=" + authorizedDollars +
                 '}';
@@ -50,6 +61,7 @@ public class Card  {
             cc = faker.finance().creditCard();
 
         result.setCardNumber(cc);
+        result.setLocked( faker.random().nextDouble() < .1);
 
         result.setCreditLimitDollars(faker.random().nextInt(1,100) * 100);
         result.setAuthorizedDollars(faker.random().nextInt(0, result.getCreditLimitDollars()));

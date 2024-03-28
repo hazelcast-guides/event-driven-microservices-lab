@@ -3,10 +3,13 @@ package hazelcast.platform.labs.payments.domain;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
 public class Transaction {
+    public enum Status {NEW, DECLINED_BIG_TXN, DECLINED_LOCKED, DECLINED_OVER_AUTH_LIMIT, APPROVED};
     private String cardNumber;
     private String transactionId;
     private int amount;
     private String merchantId;
+
+    private Status status;
 
     public String getCardNumber() {
         return cardNumber;
@@ -44,6 +47,14 @@ public class Transaction {
         this.merchantId = merchantId;
     }
 
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +
@@ -51,6 +62,7 @@ public class Transaction {
                 ", transactionId='" + transactionId + '\'' +
                 ", amount=" + amount +
                 ", merchantId='" + merchantId + '\'' +
+                ", status=" + status +
                 '}';
     }
 }

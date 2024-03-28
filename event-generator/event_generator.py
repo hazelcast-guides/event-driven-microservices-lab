@@ -46,6 +46,7 @@ def fake_txn(ccnum: str):
 
     result["amount"] = amt
     result["merchant_id"] = f'{random.randrange(0, 9999):04d}'
+    result["status"] = 'NEW'
 
     return result
 

@@ -15,19 +15,7 @@ import hazelcast.platform.labs.payments.domain.Transaction;
 import java.util.Map;
 import java.util.Properties;
 
-public class FraudPipeline {
-
-    /*
-     * Format a json string with the transaction_id and approval status
-     * as shown below
-     * {
-     *    "transaction_id": "12345",
-     *    "approved": true
-     * }
-     */
-    public static String resultJson(String txnId, boolean approved){
-        return "{ \"transaction_id\": \"" + txnId + "\", \"approved\": " + (approved ? "true" : "false") + "}";
-    }
+public class AuthorizationPipeline {
 
     private static Properties kafkaProperties(String bootstrapServers){
         Properties kafkaConnectionProps = new Properties();
@@ -72,7 +60,8 @@ public class FraudPipeline {
          *   "card_number": "6771-8952-0704-5425",
          *   "transaction_id": "1710969754",
          *   "amount": 42,
-         *   "merchant_id": "8222"
+         *   "merchant_id": "8222",
+         *   "status": "NEW"
          * }
          *
          */
@@ -84,44 +73,51 @@ public class FraudPipeline {
          * of Transaction.
          */
 
-        StreamStage<Transaction> transactions =
-                cardTransactions.mapUsingService(jsonService, (svc, entry) -> svc.readValue(entry.getValue(), Transaction.class));
+        StreamStage<Transaction> transactions = cardTransactions.mapUsingService(
+                jsonService,
+                (svc, entry) -> svc.readValue(entry.getValue(), Transaction.class)).setName("parse");
 
 
         /*
-         * This stage returns the tuple (transaction, true_or_false)
+         * Decline the transaction if the amount exceeds 5,000, set the status to DECLINED_BIG_TXN
          */
-        StreamStage<Tuple2<Transaction, Boolean>> approvals1 =
-                transactions.map(txn -> Tuple2.tuple2(txn,  txn.getAmount() <= 5000 ));
+        StreamStage<Transaction> postBigTxn =
+                transactions.map(txn -> {
+                    if (txn.getAmount() > 5000) txn.setStatus(Transaction.Status.DECLINED_BIG_TXN);
+                    return txn;
+                }).setName("check for big transactions");
 
+        /*
+         * For transactions that have not yet been declined, set the grouping key to the card number
+         * and then use mapUsingIMap to retrieve the Card from the "cards" map and verify it is not locked
+         */
+        StreamStage<Transaction> postLocked = postBigTxn.filter(txn -> txn.getStatus() == Transaction.Status.NEW)
+                .groupingKey(Transaction::getCardNumber)
+                .<Card, Transaction>mapUsingIMap(Names.CARD_MAP_NAME, (txn, card) -> {
+                    if (card.getLocked()) txn.setStatus(Transaction.Status.DECLINED_LOCKED);
+                    return txn;
+                }).setName("check for locked card");
 
-        StreamStage<Tuple2<Transaction, Boolean>> deniedBigTxn = approvals1.filter(event -> !event.f1());
+        /*
+         * Merge in the transactions that failed the big transaction test.  We still need to send back
+         * an answer
+         */
 
-        // do I need the grouping key ?
-        // how should one handle null / not found ?
-        // doc says a no-match will cause no event to be emitted but my NPE says otherwise, what up ?
-        // well shit, I also can't access the Card class in "mapUsingIMap"
-        StreamStage<Tuple2<Transaction, Boolean>> approvals2 = approvals1.filter( event -> event.f1())
-                .groupingKey( tuple -> tuple.f0().getCardNumber())
-                .<Card, Tuple2<Transaction, Boolean>>mapUsingIMap(Names.CARD_MAP_NAME, (event, card) -> {
-                    boolean approved = event.f0().getAmount() + card.getAuthorizedDollars() <= card.getCreditLimitDollars();
-                    return Tuple2.tuple2(event.f0(),approved);
-                });
+        StreamStage<Transaction> allTransactions =
+                postLocked.merge(postBigTxn.filter(txn -> txn.getStatus() == Transaction.Status.DECLINED_BIG_TXN));
+
 
         /*
          * For each transaction, create a Map.Entry where the key is the credit card number and the value is
-         * a piece of json that contains the transaction_id and the approval_status (see the "resultJson" method)
-         *
-         * Then write the entry directly to the output topic
+         * the JSON serialized transaction
          *
          * Note:the Hazelcast Tuple2 class implements Map.Entry
          */
 
-        approvals2.merge(deniedBigTxn)
-                .map(approval -> Tuple2.tuple2(
-                    approval.f0().getCardNumber(),
-                    FraudPipeline.resultJson(approval.f0().getTransactionId(), approval.f1())))
-                .writeTo(sink);
+        allTransactions.mapUsingService(
+                        jsonService,
+                        (mapper, txn) -> Tuple2.tuple2(txn.getCardNumber(), mapper.writeValueAsString(txn))
+                        ).setName("format response").writeTo(sink);
 
         return pipeline;
     }

@@ -77,12 +77,12 @@ message from the "transactions" topic and publishes an approval on the "approval
 topic.  It does no fraud detection at all!
 
 
-Check out the code in `hazelcast.platform.labs.payments.FraudPipeline` 
+Check out the code in `hazelcast.platform.labs.payments.AuthorizationPipeline` 
 
 Build and deploy the Pipeline. From a command prompt in the project root directory run:
 ```shell
 mcn clean install
-clc -c docker  job submit fraud-pipelines/target/fraud-pipelines-1.0-SNAPSHOT.jar redpanda:9092 transactions approvals --class hazelcast.platform.labs.payments.FraudPipeline
+clc -c docker  job submit fraud-pipelines/target/fraud-pipelines-1.0-SNAPSHOT.jar redpanda:9092 transactions approvals --class hazelcast.platform.labs.payments.AuthorizationPipeline
 ```
 
 To verify it worked, check the "Jobs" section of Hazelcast Management Center (http://localhost:8080) 
