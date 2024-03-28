@@ -2,7 +2,7 @@ package hazelcast.platform.labs.payments.domain;
 
 import com.github.javafaker.Faker;
 
-public class Card {
+public class Card  {
     String cardNumber;
 
     // using int just to make arithmetic easier

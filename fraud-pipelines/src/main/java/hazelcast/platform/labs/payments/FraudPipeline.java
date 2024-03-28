@@ -8,7 +8,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
-import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
 import hazelcast.platform.labs.payments.domain.Card;
 import hazelcast.platform.labs.payments.domain.Names;
 import hazelcast.platform.labs.payments.domain.Transaction;
@@ -95,16 +94,6 @@ public class FraudPipeline {
         StreamStage<Tuple2<Transaction, Boolean>> approvals1 =
                 transactions.map(txn -> Tuple2.tuple2(txn,  txn.getAmount() <= 5000 ));
 
-        // LAB 2: Modify the map operation above. The last item in the tuple should be false (not approved) if
-        //        the transaction amount is over 5000
-
-
-        // LAB 3: If the 3rd position in the tuple indicates that the transaction is not approved, there is no
-        //        point in doing any more fraud check, use a filter state to route these events directly to
-        //        the sink.  Use another filter state to check whether
-        //        transaction amount + authorizedDollars < creditLimitDollars.  authorizedDollars and creditLimitDollars
-        //        are found in the "Card" IMap.  useMapUsingIMap to retrieve this information.  We want this to be
-        //        a local operation so add a grouping key by CC#
 
         StreamStage<Tuple2<Transaction, Boolean>> deniedBigTxn = approvals1.filter(event -> !event.f1());
 

@@ -1,10 +1,10 @@
 services:
 
   hz1:
-    image: hazelcast/hazelcast-enterprise:5.3
+    image: hazelcast/hazelcast:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
-      HZ_LICENSEKEY: ${HZ_LICENSEKEY}
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     ports:
       - "5701:5701"
     volumes:
@@ -13,20 +13,20 @@ services:
       - hznet
 
   hz2:
-    image: hazelcast/hazelcast-enterprise:5.3
+    image: hazelcast/hazelcast:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
-      HZ_LICENSEKEY: ${HZ_LICENSEKEY}
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
     networks:
       - hznet
 
   hz3:
-    image: hazelcast/hazelcast-enterprise:5.3
+    image: hazelcast/hazelcast:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
-      HZ_LICENSEKEY: ${HZ_LICENSEKEY}
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
     networks:

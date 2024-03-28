@@ -1,7 +1,5 @@
-.vscode/
+.idea/
+.env
+__pycache__/
 target/
 *.iml
-.idea/
-__pycache__/
-venv/
-.env
