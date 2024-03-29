@@ -35,6 +35,10 @@ public class Card  {
         this.authorizedDollars = authorizedDollars;
     }
 
+    public void addAuthorizedDollars(int amount){
+        authorizedDollars += amount;
+    }
+
     public boolean getLocked() {
         return locked;
     }

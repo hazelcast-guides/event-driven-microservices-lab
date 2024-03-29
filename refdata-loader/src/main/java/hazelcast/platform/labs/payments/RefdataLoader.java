@@ -32,7 +32,8 @@ public class RefdataLoader {
             "CREATE OR REPLACE MAPPING cards (" +
                     "cardNumber VARCHAR, " +
                     "creditLimitDollars INTEGER, " +
-                    "authorizedDollars INTEGER " +
+                    "authorizedDollars INTEGER, " +
+                    "locked BOOLEAN" +
             ") Type IMap " +
             "OPTIONS ( " +
                 "'keyFormat' = 'varchar', " +

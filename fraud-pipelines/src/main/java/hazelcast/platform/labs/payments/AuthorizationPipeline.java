@@ -9,6 +9,7 @@ import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
 import hazelcast.platform.labs.payments.domain.Card;
+import hazelcast.platform.labs.payments.domain.CardEntryProcessor;
 import hazelcast.platform.labs.payments.domain.Names;
 import hazelcast.platform.labs.payments.domain.Transaction;
 
@@ -52,6 +53,12 @@ public class AuthorizationPipeline {
          */
         ServiceFactory<?, ObjectMapper> jsonService = ServiceFactories.sharedService(ctx -> new ObjectMapper());
 
+
+        Sink<Transaction> cardMapSink = Sinks.mapWithEntryProcessor(
+                Names.CARD_MAP_NAME,
+                Transaction::getCardNumber,
+                txn -> new CardEntryProcessor(txn.getAmount()));
+
         /*
          * Read a stream of Map.Entry<String,String> from the stream. entry.key is the cc# and
          * entry.value is a json string similar to the one shown below
@@ -91,36 +98,52 @@ public class AuthorizationPipeline {
          * For transactions that have not yet been declined, set the grouping key to the card number
          * and then use mapUsingIMap to retrieve the Card from the "cards" map and verify it is not locked
          */
-        StreamStage<Transaction> postLocked = postBigTxn.filter(txn -> txn.getStatus() == Transaction.Status.NEW)
-                .groupingKey(Transaction::getCardNumber)
+        StreamStage<Transaction> postLocked = postBigTxn.groupingKey(Transaction::getCardNumber)
                 .<Card, Transaction>mapUsingIMap(Names.CARD_MAP_NAME, (txn, card) -> {
-                    if (card.getLocked()) txn.setStatus(Transaction.Status.DECLINED_LOCKED);
+                    // don't run this check for a transaction that has already been declined
+                    if (txn.getStatus() == Transaction.Status.NEW) {
+                        if (card.getLocked()) txn.setStatus(Transaction.Status.DECLINED_LOCKED);
+                    }
                     return txn;
                 }).setName("check for locked card");
 
-        /*
-         * Merge in the transactions that failed the big transaction test.  We still need to send back
-         * an answer
-         */
 
-        StreamStage<Transaction> allTransactions =
-                postLocked.merge(postBigTxn.filter(txn -> txn.getStatus() == Transaction.Status.DECLINED_BIG_TXN));
+        StreamStage<Transaction> postAuthorized = postLocked.groupingKey(Transaction::getCardNumber)
+                .mapStateful(
+                        CardState::new,
+                        (cardState, key, txn) ->
+                                txn.getStatus() == Transaction.Status.NEW ? cardState.checkCreditLimit(txn) : txn
+                );
+
+        /*
+         * If the event is still in the NEW state, change the status to APPROVED
+         */
+        StreamStage<Transaction> finalTransactions = postAuthorized.map(txn -> {
+            if (txn.getStatus() == Transaction.Status.NEW) txn.setStatus(Transaction.Status.APPROVED);
+            return txn;
+        }).setName("final approval");
 
 
         /*
          * For each transaction, create a Map.Entry where the key is the credit card number and the value is
-         * the JSON serialized transaction
+         * the JSON serialized transaction.  Write the resulting value to the Kafka sink
          *
          * Note:the Hazelcast Tuple2 class implements Map.Entry
          */
 
-        allTransactions.mapUsingService(
+        finalTransactions.mapUsingService(
                         jsonService,
                         (mapper, txn) -> Tuple2.tuple2(txn.getCardNumber(), mapper.writeValueAsString(txn))
                         ).setName("format response").writeTo(sink);
 
+        /*
+         * Also, if the transaction was approved, then update the total authorized dollars in the cards map
+         */
+        finalTransactions.filter( txn -> txn.getStatus() == Transaction.Status.APPROVED).writeTo(cardMapSink);
+
         return pipeline;
     }
+
 
     // expects arguments: kafka bootstrap servers, input kafka topic, output kafka topic
     public static void main(String []args){
@@ -130,6 +153,7 @@ public class AuthorizationPipeline {
         }
 
         Pipeline pipeline = createPipeline(args[0], args[1], args[2]);
+        pipeline.setPreserveOrder(true);   // this keeps transactions with the same cc# from running the same step concurrently
         pipeline.setPreserveOrder(false);   // nothing in here requires order
         JobConfig jobConfig = new JobConfig();
         jobConfig.setName("Fraud Checker");

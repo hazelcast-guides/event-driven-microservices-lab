@@ -109,6 +109,41 @@ clc -c docker  job list
 Let's start with a simple rule.  If the transaction amount is over 
 
 
+# Just thinking out loud
+
+You're not supposed to update external things in something that's not a sink.  
+
+Suppose we have 2 stages 
+
+1. check amount avail and proceed if there is enough 
+2. update the amount available 
+
+If I do it as 2 steps, I've got the potential for 1A 1B 2A 2B  1B wont see the effects of 2A  
+Sounds like a stateful service or a stateful transform.  
+
+Why not just use a map like I want to ? 
+1. When the job is re-deployed from a snapshot, that state change won't be rewound
+
+OK so do I need to write it back to a map at all ?  Unfortunately our maps don't support transactions. Is there 
+some way to make this idempotent ?  Suppose I have a data structure that is  a set of transactions and 
+an amount available.  That would do it but when could I 
+
+or maybe even a list so we could return the limit as of txn x.  When we re-deploy or the cluster resizes, 
+This structure would have the effects of the very latest event but processing would start from a previous 
+event.  How old can that event be ?  Depends only on the snapshot frequency.  If we go back too far, the events 
+coming in will be before the first one in the list and we'll know that we don't know the credit limit as of then.
+
+
+Here's the design for how we handle credit limits.  
+
+mapStateful() processes a Transaction and emits the transaction with DECLINED or unchanged. If its unchanged then
+the remaining credit definitely was changed so we want to send that to a map for safe keeping.  We need to make 
+sure to maintain order so we don't get 2 processes accessing the job at the same time.  
+
+The problem is with that last bit.  The map can't be rolled back, so I suppose we just keep a transaction set. When 
+we re-hydrate the state object, we will need to 
+
+
 
 
 
