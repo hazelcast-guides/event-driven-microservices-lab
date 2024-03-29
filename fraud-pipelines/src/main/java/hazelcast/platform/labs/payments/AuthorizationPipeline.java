@@ -92,23 +92,22 @@ public class AuthorizationPipeline {
                 transactions.map(txn -> {
                     if (txn.getAmount() > 5000) txn.setStatus(Transaction.Status.DECLINED_BIG_TXN);
                     return txn;
-                }).setName("check for big transactions");
+                }).setName("check big transactions");
 
         /*
          * For transactions that have not yet been declined, set the grouping key to the card number
          * and then use mapUsingIMap to retrieve the Card from the "cards" map and verify it is not locked
          */
-        StreamStage<Transaction> postLocked = postBigTxn.groupingKey(Transaction::getCardNumber)
+        StreamStage<Transaction> postLocked = postBigTxn.filter(txn -> txn.getStatus() == Transaction.Status.NEW)
+                .groupingKey(Transaction::getCardNumber)
                 .<Card, Transaction>mapUsingIMap(Names.CARD_MAP_NAME, (txn, card) -> {
-                    // don't run this check for a transaction that has already been declined
-                    if (txn.getStatus() == Transaction.Status.NEW) {
-                        if (card.getLocked()) txn.setStatus(Transaction.Status.DECLINED_LOCKED);
-                    }
+                    if (card.getLocked()) txn.setStatus(Transaction.Status.DECLINED_LOCKED);
                     return txn;
-                }).setName("check for locked card");
+                }).setName("check  locked card");
 
 
-        StreamStage<Transaction> postAuthorized = postLocked.groupingKey(Transaction::getCardNumber)
+        StreamStage<Transaction> postAuthorized = postLocked.filter(txn -> txn.getStatus() == Transaction.Status.NEW)
+                .groupingKey(Transaction::getCardNumber)
                 .mapStateful(
                         CardState::new,
                         (cardState, key, txn) ->
@@ -118,11 +117,20 @@ public class AuthorizationPipeline {
         /*
          * If the event is still in the NEW state, change the status to APPROVED
          */
-        StreamStage<Transaction> finalTransactions = postAuthorized.map(txn -> {
-            if (txn.getStatus() == Transaction.Status.NEW) txn.setStatus(Transaction.Status.APPROVED);
-            return txn;
-        }).setName("final approval");
+        StreamStage<Transaction> approvedTransactions =
+                postAuthorized.filter( txn -> txn.getStatus() == Transaction.Status.NEW)
+                        .map(txn -> {
+                            txn.setStatus(Transaction.Status.APPROVED);
+                            return txn;
+                        }).setName("approve");
 
+        /*
+         * Now merge in everything that was previously declined
+         */
+        StreamStage<Transaction> allTransaction = approvedTransactions
+                .merge(postBigTxn.filter(txn -> txn.getStatus() != Transaction.Status.NEW))
+                .merge(postLocked.filter(txn -> txn.getStatus() != Transaction.Status.NEW))
+                .merge(postAuthorized.filter(txn -> txn.getStatus() != Transaction.Status.NEW));
 
         /*
          * For each transaction, create a Map.Entry where the key is the credit card number and the value is
@@ -131,7 +139,7 @@ public class AuthorizationPipeline {
          * Note:the Hazelcast Tuple2 class implements Map.Entry
          */
 
-        finalTransactions.mapUsingService(
+        allTransaction.mapUsingService(
                         jsonService,
                         (mapper, txn) -> Tuple2.tuple2(txn.getCardNumber(), mapper.writeValueAsString(txn))
                         ).setName("format response").writeTo(sink);
@@ -139,7 +147,7 @@ public class AuthorizationPipeline {
         /*
          * Also, if the transaction was approved, then update the total authorized dollars in the cards map
          */
-        finalTransactions.filter( txn -> txn.getStatus() == Transaction.Status.APPROVED).writeTo(cardMapSink);
+        approvedTransactions.filter( txn -> txn.getStatus() == Transaction.Status.APPROVED).writeTo(cardMapSink);
 
         return pipeline;
     }
