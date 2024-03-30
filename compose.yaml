@@ -44,64 +44,13 @@ services:
     networks:
       - hznet
 
-  # submit-aggregation-job:
-  #   image: hazelcast/hazelcast-enterprise:5.3
-  #   volumes:
-  #     - ".:/project"
-  #   command: >
-  #     hz-cli submit 
-  #         -v 
-  #         -c=hazelcast.platform.labs.machineshop.AggregationPipeline 
-  #         -t=dev@hz   
-  #         -n=aggregator 
-  #         /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
-  #         redpanda:9092 
-  #         machine_events
-  #   networks:
-  #   - hznet
-
-  # submit-status-service-job:
-  #   image: hazelcast/hazelcast-enterprise:5.3
-  #   volumes:
-  #     - ".:/project"
-  #   command: >
-  #     hz-cli 
-  #         -f /project/config/cli-client.yaml 
-  #         submit 
-  #         -v 
-  #         -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline1 
-  #         -n=status_service_1
-  #         /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
-  #         machinestatus_v1_request 
-  #         machinestatus_response
-  #   networks:
-  #     - hznet
-  #   profiles:
-  #     - disabled
-
-  # submit-status-service-job-2:
-  #   image: hazelcast/hazelcast-enterprise:5.3
-  #   volumes:
-  #     - ".:/project"
-  #   command: >
-  #     hz-cli submit 
-  #         -v 
-  #         -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline2 
-  #         -t=dev@hz   
-  #         -n=status_service_2
-  #         /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
-  #         machinestatus_v2_request 
-  #         machinestatus_response
-  #   networks:
-  #     - hznet
-
   refdata-loader:
     image: amazoncorretto:17
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
       HZ_SERVERS: hz1
       HZ_CLUSTER_NAME: dev
-      CARD_COUNT: 100000
+      CARD_COUNT: 10000
     volumes:
       - ".:/project"
     networks:
@@ -120,21 +69,35 @@ services:
        - ".:/project"
      networks:
        - hznet
-  
-  # ui:
-  #   build:
-  #     context: ./ui
-  #   environment:
-  #     HZ_SERVERS: hz
-  #     HZ_CLUSTER_NAME: dev
-  #   ports:
-  #     - "8050:8050"
-  #   networks:
-  #     - hznet
-  #   profiles:
-  #     - disabled
-  #     # note that the UI will not work on this branch because it expects events in
-  #     # the machine_status_events imap
+
+  redpanda:
+    image: redpandadata/redpanda:v23.2.12
+    command:
+      - redpanda
+      - start
+      - --smp
+      - '1'
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - '0'
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+    networks:
+      - hznet
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: redpanda:9092
+    ports:
+      - 8000:8080
+    networks:
+      - hznet
 
   # status-service:
   #   image: amazoncorretto:21
@@ -214,34 +177,6 @@ services:
   #   profiles:
   #     - disabled
 
-  redpanda:
-    image: redpandadata/redpanda:v23.2.12
-    command:
-      - redpanda
-      - start
-      - --smp
-      - '1'
-      - --reserve-memory
-      - 0M
-      - --overprovisioned
-      - --node-id
-      - '0'
-      - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092
-      - --advertise-kafka-addr
-      - PLAINTEXT://redpanda:9092
-    networks:
-      - hznet
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui
-    environment:
-      DYNAMIC_CONFIG_ENABLED: true
-      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: redpanda:9092
-    ports:
-      - 8000:8080
-    networks:
-      - hznet
 
 networks:
   hznet: 

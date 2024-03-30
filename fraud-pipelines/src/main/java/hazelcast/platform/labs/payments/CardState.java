@@ -25,7 +25,7 @@ public class CardState implements Serializable{
     /*
      * Note that this limit may actually modify t
      */
-    Transaction checkCreditLimit(Transaction t){
+    public Transaction checkCreditLimit(Transaction t){
         if (creditLimitDollars == -1){
             HazelcastInstance hz = Hazelcast.getAllHazelcastInstances().iterator().next();
             IMap<String, Card> cardMap = hz.getMap(Names.CARD_MAP_NAME);
