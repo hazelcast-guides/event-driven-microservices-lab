@@ -1,21 +1,27 @@
 # Overview 
 
-The purpose of this lab is to show you how to implement event-driven microservices using the Hazelcast platform.
+> __What is an event-driven microservice?__
+> 
+> Event driven microservices have many of the same characteristics and benefits 
+> as traditional microservices but the focus is on event-driven architecture.  
+> 
+> Our working definition will be: _A deployable piece of code that implements 
+> a cohesive set of business functions by consuming and emitting events._ 
 
-Event-driven microservices have the following basic properties:
-- they implement a cohesive "chunk" of business functionality 
-- they are deployable components
-- they consume and emit events 
+In the context of the Hazelcast platform, a `Pipeline` exhibits all the 
+characteristics described above and is the Hazelcast approach to implementing 
+event-driven microservices.
 
-_Pipelines_, a part of the Hazelcast platform, exhibit all 3 characteristics. In other words, Pipelines are 
-how Hazelcast implements event-driven microservices.  In this lab, you will learn:
-- [ ] how to implement an event-driven microservice by writing a Pipeline 
+In this lab, we will be implementing a simple event-driven microservice that 
+processes credit card payments.  
+
+You will learn the following.
+- [ ] How to implement an event-driven microservice using the `Pipeline` API
+- [ ] How to access the built-in fast data store from within a `Pipeline`
+- [ ] How to keep necessary state in a `Pipeline`
 - [ ] how to deploy your service to the Hazelcast platform
-- [ ] how to scale your service 
-- [ ] how to update your service  
-- [ ] how to take advantage of the fast data store that is built in to the platform
-- [ ] how to incorporate python code into your service 
-- [ ] as a bonus, you will learn how traditional REST microservices can be implemented with Hazelcast Pipelines
+- [ ] how to scale your service
+- [ ] how to update your service
 
 Let's get started ...
 
@@ -28,6 +34,21 @@ You will need a development laptop with the following installed:
 - __Hazelcast Command Line Client (CLC)__
 
 To install Hazelcast CLC, see: https://docs.hazelcast.com/clc/latest/install-clc
+
+# Problem Statement
+
+You need to process thousand's of payments per second. The initial logic is 
+very simple, but you also need to be able to update it on the fly.  
+
+The first version will be very simple.  The process you will implement is shown 
+below.
+
+![Workflow](resources/payment_workflow.png)
+
+The first check can be done with only information that is contained within the 
+event but the next 2 checks will require additional information that is not on 
+the card.  Instead, the required information will be retrieved from a distributed 
+map (`IMap`) that is part of the Hazelcast platform.
 
 # Overview of the Environment
 
@@ -74,7 +95,7 @@ You can also access the Hazelcast Management Center at http://localhost:8080
 
 For this lab the pipeline has already been built for you.  It simply reads every 
 message from the "transactions" topic and publishes an approval on the "approvals" 
-topic.  It does no fraud detection at all!
+topic.  
 
 
 Check out the code in `hazelcast.platform.labs.payments.AuthorizationPipeline` 
@@ -82,7 +103,7 @@ Check out the code in `hazelcast.platform.labs.payments.AuthorizationPipeline`
 Build and deploy the Pipeline. From a command prompt in the project root directory run:
 ```shell
 mcn clean install
-clc -c docker  job submit fraud-pipelines/target/fraud-pipelines-1.0-SNAPSHOT.jar redpanda:9092 transactions approvals --class hazelcast.platform.labs.payments.AuthorizationPipeline
+clc -c docker  job submit payment-pipelines/target/payment-pipelines-1.0-SNAPSHOT.jar redpanda:9092 transactions approvals --class hazelcast.platform.labs.payments.AuthorizationPipeline
 ```
 
 To verify it worked, check the "Jobs" section of Hazelcast Management Center (http://localhost:8080) 
@@ -96,57 +117,103 @@ clc -c docker  job list
 ```
 
 ### progress check
-- [ ] how to implement an event-driven microservice by writing a Pipeline
+- [ ] How to implement an event-driven microservice using the `Pipeline` API
+- [ ] How to access the built-in fast data store from within a `Pipeline`
+- [ ] How to keep necessary state in a `Pipeline`
 - [x] how to deploy your service to the Hazelcast platform
 - [ ] how to scale your service
-- [ ] how to update your service while it is running
-- [ ] how to take advantage of the fast data store that is built in to the platform
-- [ ] how to incorporate python code into your service
-- [ ] as a bonus, you will learn how traditional REST microservices can be implemented with Hazelcast Pipelines
+- [ ] how to update your service
 
-# Lab 2: Modify the Service
+# Lab 2: Check for Large Payments
 
-Let's start with a simple rule.  If the transaction amount is over 
+> __TIP__
+>  
+> Make sure you are familiar with the `map` method of `StreamStage`
+
+Let's start with a simple rule.  If the transaction amount is over 5,000 then 
+decline it by setting the status field to `DECLINED_BIG_TXN` (an enum).  The shell
+of the Pipeline is provided in the `AuthorizationPipeline` class of the `payment-pipelines` 
+project.   Both the input and output are a `Transaction` object.
+
+### progress check
+- [ ] How to implement an event-driven microservice using the `Pipeline` API
+- [ ] How to access the built-in fast data store from within a `Pipeline`
+- [ ] How to keep necessary state in a `Pipeline`
+- [x] how to deploy your service to the Hazelcast platform
+- [ ] how to scale your service
+- [x] how to update your service# Lab 3: Check for Locked Cards
+
+# Lab 3: Check for Locked Card
+> __TIP__
+>
+> Make sure you are familiar with the `mapsStateful` method of `StreamStageWithKey`
+
+In this lab, you will need to pull in additional information from the "cards"
+IMap to determine whether the customer has locked their card.  If the card is 
+locked, decline the transaction by setting the status field to `DECLINED_LOCKED` 
+As with the previous lab, both the input and output are a `Transaction` object.
+
+### progress check
+- [ ] How to implement an event-driven microservice using the `Pipeline` API
+- [x] How to access the built-in fast data store from within a `Pipeline`
+- [ ] How to keep necessary state in a `Pipeline`
+- [x] how to deploy your service to the Hazelcast platform
+- [ ] how to scale your service
+- [x] how to update your service
+
+# Lab 4: Check the Authorization Limit
+
+> __TIP__
+>
+> Make sure you are familiar with the `mapsStateful` method of `StreamStageWithKey`
+
+In this lab, you will need to both read information that is not on the event
+(the authorization limit and the amount authorized) and possibly update 
+it (amount authorized).  That means this is a stateful operation and you 
+will use `mapStateful`.
+
+Note that the credit limit check and the update have to be done together.  It might 
+seem that one stage could do the check and the next one could update the state but, 
+this will not work.  See the sequence diagram below that illustrates how this 
+approach could lead to the wrong result.
+
+![sequence](resources/sequence.png)
+
+Congratulations!  You now have a rudimentary payment pipeline that can easily
+scale to handle 1000's of transactions per second.
+
+### progress check
+- [x] How to implement an event-driven microservice using the `Pipeline` API
+- [x] How to access the built-in fast data store from within a `Pipeline`
+- [x] How to keep necessary state in a `Pipeline`
+- [x] how to deploy your service to the Hazelcast platform
+- [ ] how to scale your service
+- [x] how to update your service
+
+# Lab 5: Scale It Up
+
+Once you've written a pipeline, all you need to do to scale it up is 
+add more nodes! The Hazelcast platform takes care of the rest.
+
+> __NOTE__
+> 
+> When you add or remove cluster nodes, Hazelcast will undeploy the job, 
+> re-plan it for the new number of nodes, and then re-redploy it.
+> 
+> With Hazelcast Community Edition, the events that arrive between the time
+> that the pipeline is undeployed and the time that it is re-deployed will 
+> not be processed.
+> 
+> With Hazelcast Enterprise, you can specify a processing guarantee of 
+> __at-least-once__ or __exactly-once__.  In that case, the Hazelcast 
+> platform will take a snapshot of the pipeline state, including position 
+> in all sources, and will resume the job from that snapshot. See
+> https://docs.hazelcast.com/hazelcast/5.3/fault-tolerance/fault-tolerance#processing-guarantee-is-a-shared-concern
+> for details.
 
 
-# Just thinking out loud
 
-You're not supposed to update external things in something that's not a sink.  
+# The End
 
-Suppose we have 2 stages 
-
-1. check amount avail and proceed if there is enough 
-2. update the amount available 
-
-If I do it as 2 steps, I've got the potential for 1A 1B 2A 2B  1B wont see the effects of 2A  
-Sounds like a stateful service or a stateful transform.  
-
-Why not just use a map like I want to ? 
-1. When the job is re-deployed from a snapshot, that state change won't be rewound
-
-OK so do I need to write it back to a map at all ?  Unfortunately our maps don't support transactions. Is there 
-some way to make this idempotent ?  Suppose I have a data structure that is  a set of transactions and 
-an amount available.  That would do it but when could I 
-
-or maybe even a list so we could return the limit as of txn x.  When we re-deploy or the cluster resizes, 
-This structure would have the effects of the very latest event but processing would start from a previous 
-event.  How old can that event be ?  Depends only on the snapshot frequency.  If we go back too far, the events 
-coming in will be before the first one in the list and we'll know that we don't know the credit limit as of then.
-
-
-Here's the design for how we handle credit limits.  
-
-mapStateful() processes a Transaction and emits the transaction with DECLINED or unchanged. If its unchanged then
-the remaining credit definitely was changed so we want to send that to a map for safe keeping.  We need to make 
-sure to maintain order so we don't get 2 processes accessing the job at the same time.  
-
-The problem is with that last bit.  The map can't be rolled back, so I suppose we just keep a transaction set. When 
-we re-hydrate the state object, we will need to 
-
-
-
-
-
-
-
-
+You have reached the end of this course. Well done!  If you would like to 
+learn more about the Hazelcast platform, please check out http://training.hazelcast.com

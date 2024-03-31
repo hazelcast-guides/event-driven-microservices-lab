@@ -10,7 +10,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>fraud-pipelines</artifactId>
+    <artifactId>payment-pipelines</artifactId>
 
     <!--
     Note: all Hazelcast dependencies should use "provided" scope so they are not included in the

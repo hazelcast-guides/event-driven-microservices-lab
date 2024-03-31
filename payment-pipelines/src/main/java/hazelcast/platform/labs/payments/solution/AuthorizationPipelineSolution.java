@@ -1,4 +1,4 @@
-package hazelcast.platform.labs.payments;
+package hazelcast.platform.labs.payments.solution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
@@ -8,6 +8,7 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
+import hazelcast.platform.labs.payments.CardState;
 import hazelcast.platform.labs.payments.domain.Card;
 import hazelcast.platform.labs.payments.domain.CardEntryProcessor;
 import hazelcast.platform.labs.payments.domain.Names;
@@ -16,7 +17,7 @@ import hazelcast.platform.labs.payments.domain.Transaction;
 import java.util.Map;
 import java.util.Properties;
 
-public class AuthorizationPipeline {
+public class AuthorizationPipelineSolution {
 
     private static Properties kafkaProperties(String bootstrapServers){
         Properties kafkaConnectionProps = new Properties();
@@ -172,7 +173,7 @@ public class AuthorizationPipeline {
         }
 
         Pipeline pipeline = createPipeline(args[0], args[1], args[2]);
-        pipeline.setPreserveOrder(false);   // nothing in here requires order
+        pipeline.setPreserveOrder(true);   // we need the credit check stage to be executed serially for a given card
         JobConfig jobConfig = new JobConfig();
         jobConfig.setName("Fraud Checker");
         HazelcastInstance hz = Hazelcast.bootstrappedInstance();

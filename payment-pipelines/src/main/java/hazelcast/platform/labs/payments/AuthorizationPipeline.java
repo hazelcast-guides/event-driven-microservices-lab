@@ -1,4 +1,4 @@
-package hazelcast.platform.labs.payments.solution;
+package hazelcast.platform.labs.payments;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
@@ -8,7 +8,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
-import hazelcast.platform.labs.payments.CardState;
 import hazelcast.platform.labs.payments.domain.Card;
 import hazelcast.platform.labs.payments.domain.CardEntryProcessor;
 import hazelcast.platform.labs.payments.domain.Names;
@@ -17,7 +16,7 @@ import hazelcast.platform.labs.payments.domain.Transaction;
 import java.util.Map;
 import java.util.Properties;
 
-public class AuthorizationPipelineSolution {
+public class AuthorizationPipeline {
 
     private static Properties kafkaProperties(String bootstrapServers){
         Properties kafkaConnectionProps = new Properties();
@@ -89,26 +88,31 @@ public class AuthorizationPipelineSolution {
 
         /*
          * Decline the transaction if the amount exceeds 5,000, set the status to DECLINED_BIG_TXN
+         *
+         *
+         * TODO LAB 2
+         * Implement the check for big transactions as described above. Your logic should replace the filter statement.
+         * Use the "map" method of "StreamStage" (https://docs.hazelcast.org/docs/latest/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStage.html)
+         * Modify the status field of the input Transaction object (if needed) and return that same object as
+         * a result.
          */
-        StreamStage<Transaction> postBigTxn =
-                transactions.map(txn -> {
-                    if (txn.getAmount() > 5000) txn.setStatus(Transaction.Status.DECLINED_BIG_TXN);
-                    return txn;
-                }).setName("check for big transactions");
+        StreamStage<Transaction> postBigTxn = transactions.filter(t -> true).setName("check for big transactions");
+
 
         /*
          * Set the grouping key to the cardNumber ( txn.getCardNumber).  For transactions that have not yet been
          * declined (i.e. status is NEW), use mapUsingIMap to retrieve the Card from the "cards" map and verify it
          * is not locked.  If it is locked, set the status to DECLINED_LOCKED
+         *
+         * TODO LAB 3
+         * Implement the check for locked cards as described above. Your logic should replace the filter statement.
+         * First, use the "groupingKey" method to set the grouping key the card number
+         * (i.e. .groupingKey( txn -> txn.getCardNumber()) ). Then use the "mapUsingIMap" method
+         * of "StreamStageWithKey" (https://docs.hazelcast.org/docs/latest/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html)
+         * to retrieve that Card and check whether it is locked.  If it is, set the status field accordingly.
+         * Whether or not the field was modified, return the Transaction object from  mapUsingIMap.
          */
-        StreamStage<Transaction> postLocked = postBigTxn.groupingKey(Transaction::getCardNumber)
-                .<Card, Transaction>mapUsingIMap(Names.CARD_MAP_NAME, (txn, card) -> {
-                    // don't run this check for a transaction that has already been declined
-                    if (txn.getStatus() == Transaction.Status.NEW) {
-                        if (card.getLocked()) txn.setStatus(Transaction.Status.DECLINED_LOCKED);
-                    }
-                    return txn;
-                }).setName("check for locked card");
+        StreamStage<Transaction> postLocked = postBigTxn.filter(txn -> true).setName("check for locked card");
 
         /*
          * Again, set the grouping key to the card number, which creates a StreamStageWithKey and routes the
@@ -126,13 +130,16 @@ public class AuthorizationPipelineSolution {
          *    will not be in sync with the stream.  For example, the stream might revert to 1 minute ago
          *    but the IMap entry would include authorized dollars from more recent authorization events
          *    and a transaction that was previously approved could get declined during reprocessing.
+         *
+         *
+         * TODO LAB 4
+         * Implement the authorization limit check as described above. Your logic should replace the filter statement.
+         * First, use the "groupingKey" method to set the grouping key the card number. Then use the "mapStateful" method
+         * of "StreamStageWithKey" (https://docs.hazelcast.org/docs/latest/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html)
+         * to both check the authorization limit and update the totalAuthorizedDollars.  You should use the CardState
+         * object to keep state (additional explanation above).
          */
-        StreamStage<Transaction> postAuthorized = postLocked.groupingKey(Transaction::getCardNumber)
-                .mapStateful(
-                        CardState::new,
-                        (cardState, key, txn) ->
-                                txn.getStatus() == Transaction.Status.NEW ? cardState.checkCreditLimit(txn) : txn
-                );
+        StreamStage<Transaction> postAuthorized = postLocked.filter(t->true).setName("check authorization limit");
 
         /*
          * If the event is still in the NEW state, change the status to APPROVED
