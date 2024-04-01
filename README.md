@@ -40,8 +40,7 @@ To install Hazelcast CLC, see: https://docs.hazelcast.com/clc/latest/install-clc
 You need to process thousand's of payments per second. The initial logic is 
 very simple, but you also need to be able to update it on the fly.  
 
-The first version will be very simple.  The process you will implement is shown 
-below.
+The process you will implement is shown below.
 
 ![Workflow](resources/payment_workflow.png)
 
@@ -133,7 +132,20 @@ clc -c docker  job list
 Let's start with a simple rule.  If the transaction amount is over 5,000 then 
 decline it by setting the status field to `DECLINED_BIG_TXN` (an enum).  The shell
 of the Pipeline is provided in the `AuthorizationPipeline` class of the `payment-pipelines` 
-project.   Both the input and output are a `Transaction` object.
+project.   Both the input and output are a `Transaction` object. 
+
+After you have implemented your pipeline, cancel the previously running job, 
+either from the ui or with CLC (`clc -c docker job cancel my-job-id`), rebuild 
+the project (`mvn clean install`) and re-deploy using the same steps as above.
+
+> __NOTE__
+>  
+> With the Community Edition, events that arrive while the job is un-deployed, 
+> will not be processed.  With the Enterprise Edition, you can take a snapshot 
+> before un-deploying the job.  The snapshot will include the in-flight state 
+> and the index position of the source.  When you deploy a new job, you can 
+> choose to start it from a snapshot, in which case the job will resume 
+> where it left off and no events will be missed.
 
 ### progress check
 - [ ] How to implement an event-driven microservice using the `Pipeline` API
@@ -146,12 +158,19 @@ project.   Both the input and output are a `Transaction` object.
 # Lab 3: Check for Locked Card
 > __TIP__
 >
-> Make sure you are familiar with the `mapsStateful` method of `StreamStageWithKey`
+> Make sure you are familiar with the `groupingKey` method of `StreamStage` and 
+> the mapUsingIMap` method of `StreamStageWithKey`
 
 In this lab, you will need to pull in additional information from the "cards"
 IMap to determine whether the customer has locked their card.  If the card is 
 locked, decline the transaction by setting the status field to `DECLINED_LOCKED` 
 As with the previous lab, both the input and output are a `Transaction` object.
+
+Add this stage to the pipeline then re-deploy and test your service. Additional 
+guidance is provided in `AuthorizationPipeline.java`.
+
+The `mapUsingIMap` method used in this lab is important because it addresses 
+data enrichment, something almost all pipelines need to do. 
 
 ### progress check
 - [ ] How to implement an event-driven microservice using the `Pipeline` API
@@ -166,6 +185,7 @@ As with the previous lab, both the input and output are a `Transaction` object.
 > __TIP__
 >
 > Make sure you are familiar with the `mapsStateful` method of `StreamStageWithKey`
+> Also, be sure to have a look at the `CardState` class.
 
 In this lab, you will need to both read information that is not on the event
 (the authorization limit and the amount authorized) and possibly update 
@@ -178,6 +198,13 @@ this will not work.  See the sequence diagram below that illustrates how this
 approach could lead to the wrong result.
 
 ![sequence](resources/sequence.png)
+
+Implement the above functionality in your pipeline and re-deploy it.  If you 
+look at the "approvals" topic you should be able to see many APPROVED transactions 
+as well as transactions in DECLINED_LOCKED, DECLINED_OVER_AUTH_LIMIT and 
+DECLINED_BIG_TXN status.
+
+![output](resources/output.png)
 
 Congratulations!  You now have a rudimentary payment pipeline that can easily
 scale to handle 1000's of transactions per second.
@@ -195,10 +222,18 @@ scale to handle 1000's of transactions per second.
 Once you've written a pipeline, all you need to do to scale it up is 
 add more nodes! The Hazelcast platform takes care of the rest.
 
+To scale up, run the following command to start 2 more nodes.
+```shell
+docker compose --profile scaleup up -d 
+```
+
+Using management center, you can see that 2 more nodes have joined the 
+cluster. When you add or remove cluster nodes, Hazelcast will undeploy the job,
+re-plan it for the new number of nodes, and then re-redploy it. 
+
+That's all there is to it!
+
 > __NOTE__
-> 
-> When you add or remove cluster nodes, Hazelcast will undeploy the job, 
-> re-plan it for the new number of nodes, and then re-redploy it.
 > 
 > With Hazelcast Community Edition, the events that arrive between the time
 > that the pipeline is undeployed and the time that it is re-deployed will 
@@ -211,9 +246,22 @@ add more nodes! The Hazelcast platform takes care of the rest.
 > https://docs.hazelcast.com/hazelcast/5.3/fault-tolerance/fault-tolerance#processing-guarantee-is-a-shared-concern
 > for details.
 
+### progress check
+- [x] How to implement an event-driven microservice using the `Pipeline` API
+- [x] How to access the built-in fast data store from within a `Pipeline`
+- [x] How to keep necessary state in a `Pipeline`
+- [x] how to deploy your service to the Hazelcast platform
+- [x] how to scale your service
+- [x] how to update your service
 
 
 # The End
 
 You have reached the end of this course. Well done!  If you would like to 
 learn more about the Hazelcast platform, please check out http://training.hazelcast.com
+
+To stop everything, use the following command.
+```shell
+docker compose --profile scaleup down
+```
+
