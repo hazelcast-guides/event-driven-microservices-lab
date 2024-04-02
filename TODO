@@ -1,7 +1,0 @@
-TO DO
-- nice to add something in the slides about the main stream stage methods
-- redpanda not respecting default_topic_partitions
-- provide a performance test - that would be cool
-- add a demo of making this into request/response
-- does CardState need to be thread safe ?
-
