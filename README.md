@@ -101,7 +101,7 @@ Check out the code in `hazelcast.platform.labs.payments.AuthorizationPipeline`
 
 Build and deploy the Pipeline. From a command prompt in the project root directory run:
 ```shell
-mcn clean install
+mvn clean install
 clc -c docker  job submit payment-pipelines/target/payment-pipelines-1.0-SNAPSHOT.jar redpanda:9092 transactions approvals --class hazelcast.platform.labs.payments.AuthorizationPipeline
 ```
 
