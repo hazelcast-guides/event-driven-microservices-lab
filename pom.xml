@@ -15,8 +15,18 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <hazelcast.version>5.4.0-BETA-2</hazelcast.version>
-        <jackson.version>2.15.1</jackson.version>
+        <jackson.version>2.15.2</jackson.version>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+        </plugins>
+    </build>
 
     <!-- <repositories>
         <repository>
